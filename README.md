@@ -8,6 +8,12 @@ source Postgres ──WAL──▶ reader ──▶ Redpanda ──▶ writer �
 
 The source fixture is Artie's own [terra](https://github.com/artie-labs/terra) demo dataset, run unmodified.
 
+## Architecture
+
+![minicdc architecture](docs/assets/architecture.png)
+
+The reader acks a WAL position to Postgres only after Kafka confirms; the writer commits a Kafka offset only after the destination transaction commits. Those two rules are what make a kill of any component survivable. Diagram source (editable): [docs/assets/architecture.drawio](docs/assets/architecture.drawio).
+
 ## Run it
 
 Everything below runs from the repo root and needs only Docker and Go.
