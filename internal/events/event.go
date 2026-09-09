@@ -26,6 +26,10 @@ type ChangeEvent struct {
 	CommitTS time.Time      `json:"commit_ts"`
 	PK       map[string]any `json:"pk"`
 	After    map[string]any `json:"after"` // full row; nil for deletes
+	// Unchanged lists TOAST columns the source did not retransmit because the
+	// update left them untouched. They are absent from After; the writer must
+	// preserve the destination's existing value, never write NULL.
+	Unchanged []string `json:"unchanged,omitempty"`
 	// Types maps column name to the source Postgres type name (e.g. "int8",
 	// "timestamptz"). The writer uses it to create destination tables without
 	// ever touching the source database.

@@ -59,12 +59,12 @@ writer.Run                                                internal/writer/writer
     └── if buffer.ShouldFlush()          (count >= 500, or 2s since last flush)
         └── flushAll()                                    internal/writer/flush.go
             └── per table with buffered events:
-                ├── dedupe: last event per PK wins        internal/writer/flush.go
+                ├── dedupe: fold to last state per PK     internal/writer/flush.go
                 ├── tx.Begin on dest
                 ├── ensureTable(evt)                      internal/writer/ddl.go
-                ├── COPY batch into temp staging table    internal/writer/staging.go
-                ├── DELETE target rows where op = 'd'
-                ├── upsert the rest (unchanged-aware)     internal/writer/staging.go
+                ├── bulk-load batch into temp staging     internal/writer/staging.go
+                ├── MERGE staging into target             internal/writer/staging.go
+                │     (delete 'd' rows, upsert the rest, unchanged-aware)
                 ├── tx.Commit
                 └── consumer.CommitMessages(newest msg)   ONLY after tx.Commit
 ```
@@ -121,10 +121,14 @@ The TOAST trap: a large value (e.g. a long `observations.notes`) that was NOT to
 ```text
 buffer (per table):
   [u pk=77] [c pk=101] [u pk=77] [d pk=101]      arrival order, per-row order guaranteed
-       │ dedupe: last event per PK wins           (same partition = ordered, so safe)
+       │ dedupe: FOLD to last state per PK        (same partition = ordered, so safe)
+       │   fold, not "keep last": if an earlier event carried a TOASTed value
+       │   and the last has it "unchanged", the value is copied forward,
+       │   otherwise it would be lost (the earlier event is discarded)
        ▼
-  {77: [u ...latest], 101: [d]}
-       │ COPY into staging
+  {77: [u ...final state], 101: [d]}
+       │ bulk-load into staging (batched INSERT with $n::type casts;
+       │  binary COPY is a later optimization)
        ▼
 staging row = target columns + two extras:
   __op         'c' | 'u' | 'd'
@@ -181,6 +185,11 @@ crash-test.sh    load.sh &  ->  kill -9 writer  ->  restart writer  ->
                  kill -9 reader ->  restart reader ->  stop load ->
                  cdcctl verify --timeout 60s     -> exit 0 iff MATCH
 ```
+
+## Gotchas found while building
+
+- kafka-go's `Writer` defaults `BatchTimeout` to 1 second, so a synchronous per-transaction publish crawls at ~1 txn/s. The first crash-test run "failed" purely from this lag: dest converging at a trickle past the verify timeout. 10ms fixed it. Lesson worth retelling: the pipeline was correct but unusably slow, and only an end-to-end test caught it.
+- A kill -9'd writer never leaves its consumer group; the broker evicts it only after the session timeout, and the restarted writer waits out that rebalance. Session timeout lowered to 10s to keep recovery snappy.
 
 ## Gotchas known going in
 

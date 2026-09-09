@@ -2,8 +2,10 @@ package writer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/segmentio/kafka-go"
@@ -12,10 +14,16 @@ import (
 	"github.com/BABTUNA/minicdc/internal/events"
 )
 
+const (
+	flushMaxEvents = 500
+	flushInterval  = 2 * time.Second
+)
+
 type Writer struct {
 	consumer *kafka.Reader
 	pool     *pgxpool.Pool
 	ddl      *ddlManager
+	buffer   *Buffer
 }
 
 func New(ctx context.Context, cfg config.Config) (*Writer, error) {
@@ -32,9 +40,14 @@ func New(ctx context.Context, cfg config.Config) (*Writer, error) {
 		GroupID:     "minicdc-writer",
 		Topic:       cfg.Topic,
 		StartOffset: kafka.FirstOffset,
+		// A kill -9'd writer never leaves the group; the broker only evicts it
+		// after the session timeout, and the restarted writer waits out that
+		// rebalance. Short timeouts keep crash recovery snappy.
+		SessionTimeout:    10 * time.Second,
+		HeartbeatInterval: 3 * time.Second,
 	})
 
-	return &Writer{consumer: consumer, pool: pool, ddl: newDDLManager()}, nil
+	return &Writer{consumer: consumer, pool: pool, ddl: newDDLManager(), buffer: NewBuffer()}, nil
 }
 
 func (w *Writer) Close() error {
@@ -42,38 +55,66 @@ func (w *Writer) Close() error {
 	return w.consumer.Close()
 }
 
-// Run is phase 1's deliberately dumb apply loop: one message, one insert, one
-// offset commit. Phase 2 replaces the middle with buffer/flush/merge; the
-// invariant that the offset commits only AFTER the destination write succeeds
-// is already load-bearing and survives every later phase.
+// Run buffers events and flushes on size or age. The crash-safety contract:
+// the Kafka offsets are committed only after every flush transaction has
+// committed on the destination. A crash anywhere re-delivers the batch, and
+// the merge re-asserts the same final states.
 func (w *Writer) Run(ctx context.Context) error {
 	for {
-		msg, err := w.consumer.FetchMessage(ctx)
-		if err != nil {
-			if ctx.Err() != nil {
-				return ctx.Err()
+		fetchCtx := ctx
+		var cancel context.CancelFunc
+		if !w.buffer.Empty() {
+			// Something is waiting: fetch only until the buffer is due.
+			due := flushInterval - w.buffer.Age()
+			fetchCtx, cancel = context.WithTimeout(ctx, max(due, time.Millisecond))
+		}
+
+		msg, err := w.consumer.FetchMessage(fetchCtx)
+		if cancel != nil {
+			cancel()
+		}
+		switch {
+		case err == nil:
+			evt, decodeErr := events.Decode(msg.Value)
+			if decodeErr != nil {
+				return fmt.Errorf("offset %d: %w", msg.Offset, decodeErr)
 			}
+			w.buffer.Add(evt, msg)
+			if w.buffer.Count() < flushMaxEvents {
+				continue
+			}
+		case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
+			// Buffer aged out with no new messages: flush what we have.
+		case ctx.Err() != nil:
+			return ctx.Err()
+		default:
 			return fmt.Errorf("fetch message: %w", err)
 		}
 
-		evt, err := events.Decode(msg.Value)
-		if err != nil {
-			return fmt.Errorf("offset %d: %w", msg.Offset, err)
-		}
-		if evt.Op != events.OpCreate {
-			return fmt.Errorf("offset %d: op %q not supported in phase 1", msg.Offset, evt.Op)
-		}
-
-		if err := w.ddl.ensureTable(ctx, w.pool, evt); err != nil {
+		if err := w.flushAll(ctx); err != nil {
 			return err
 		}
-		if err := applyInsert(ctx, w.pool, evt); err != nil {
-			return err
-		}
-
-		if err := w.consumer.CommitMessages(ctx, msg); err != nil {
-			return fmt.Errorf("commit offset %d: %w", msg.Offset, err)
-		}
-		slog.Info("applied", "table", evt.Table, "pk", evt.PK, "offset", msg.Offset)
 	}
+}
+
+func (w *Writer) flushAll(ctx context.Context) error {
+	if w.buffer.Empty() {
+		return nil
+	}
+	tables, msgs := w.buffer.TakeAll()
+
+	total := 0
+	for table, evts := range tables {
+		if err := flushTable(ctx, w.pool, w.ddl, table, evts); err != nil {
+			return err
+		}
+		total += len(evts)
+	}
+
+	// Only now: every table's transaction is durable on the destination.
+	if err := w.consumer.CommitMessages(ctx, msgs...); err != nil {
+		return fmt.Errorf("commit offsets after flush: %w", err)
+	}
+	slog.Info("flushed", "events", total, "tables", len(tables))
+	return nil
 }

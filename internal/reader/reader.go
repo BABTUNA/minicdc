@@ -142,7 +142,40 @@ func (r *Reader) handleWALMessage(ctx context.Context, xld pglogrepl.XLogData, t
 		if err != nil {
 			return txnBuffer, err
 		}
-		evt, err := buildChangeEvent(rel, m.Tuple)
+		evt, err := buildChangeEvent(events.OpCreate, rel, m.Tuple)
+		if err != nil {
+			return txnBuffer, err
+		}
+		txnBuffer = append(txnBuffer, evt)
+
+	case *pglogrepl.UpdateMessageV2:
+		rel, err := r.rels.Get(m.RelationID)
+		if err != nil {
+			return txnBuffer, err
+		}
+		evt, err := buildChangeEvent(events.OpUpdate, rel, m.NewTuple)
+		if err != nil {
+			return txnBuffer, err
+		}
+		// PK-changing update: the old row must die or it lingers downstream.
+		oldPK, changed, err := oldKeyIfChanged(rel, m.OldTuple, evt)
+		if err != nil {
+			return txnBuffer, err
+		}
+		if changed {
+			txnBuffer = append(txnBuffer, events.ChangeEvent{
+				Op: events.OpDelete, Table: rel.Table, PK: oldPK, Types: evt.Types,
+			})
+			evt.Op = events.OpCreate
+		}
+		txnBuffer = append(txnBuffer, evt)
+
+	case *pglogrepl.DeleteMessageV2:
+		rel, err := r.rels.Get(m.RelationID)
+		if err != nil {
+			return txnBuffer, err
+		}
+		evt, err := buildDeleteEvent(rel, m.OldTuple)
 		if err != nil {
 			return txnBuffer, err
 		}
@@ -164,8 +197,7 @@ func (r *Reader) handleWALMessage(ctx context.Context, xld pglogrepl.XLogData, t
 		txnBuffer = txnBuffer[:0]
 
 	default:
-		// Update/Delete/Truncate arrive here once phase 2 lands; Origin/Type
-		// messages are safe to ignore.
+		// Truncate/Origin/Type messages are safe to ignore for now.
 		slog.Debug("skipping pgoutput message", "type", fmt.Sprintf("%T", m))
 	}
 	return txnBuffer, nil

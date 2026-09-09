@@ -3,6 +3,7 @@ package sink
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 
@@ -23,6 +24,10 @@ func NewKafkaPublisher(broker, topic string) *KafkaPublisher {
 			Balancer:               &kafka.Hash{}, // partition by message key
 			RequiredAcks:           kafka.RequireAll,
 			AllowAutoTopicCreation: true,
+			// kafka-go defaults BatchTimeout to 1s, which makes a synchronous
+			// per-transaction publish crawl at ~1 txn/s. CDC wants the events
+			// on the wire now; 10ms only coalesces genuinely concurrent sends.
+			BatchTimeout: 10 * time.Millisecond,
 		},
 	}
 }

@@ -49,10 +49,19 @@ func (d *ddlManager) ensureTable(ctx context.Context, pool *pgxpool.Pool, evt ev
 }
 
 // orderedColumns returns the event's columns in a stable order: PK columns
-// first, the rest alphabetical. Maps are unordered; DDL and inserts must not be.
+// first, the rest alphabetical. Maps are unordered; DDL and inserts must not
+// be. Types is the authoritative column set (After is nil on deletes and
+// missing unchanged TOAST columns).
 func orderedColumns(evt events.ChangeEvent) []string {
+	source := evt.Types
+	if len(source) == 0 {
+		source = map[string]string{}
+		for col := range evt.After {
+			source[col] = ""
+		}
+	}
 	var pks, rest []string
-	for col := range evt.After {
+	for col := range source {
 		if _, isPK := evt.PK[col]; isPK {
 			pks = append(pks, col)
 		} else {
