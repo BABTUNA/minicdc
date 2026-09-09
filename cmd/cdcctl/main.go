@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/BABTUNA/minicdc/internal/bench"
 	"github.com/BABTUNA/minicdc/internal/config"
 	"github.com/BABTUNA/minicdc/internal/verify"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: cdcctl verify [--timeout 30s]")
-		os.Exit(2)
+		usage()
 	}
 
 	switch os.Args[1] {
@@ -27,8 +27,27 @@ func main() {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			os.Exit(1)
 		}
+	case "latency":
+		fs := flag.NewFlagSet("latency", flag.ExitOnError)
+		table := fs.String("table", "public.observations", "destination table to measure")
+		csv := fs.String("csv", "data/latency.csv", "path to write the per-minute CSV")
+		fs.Parse(os.Args[2:])
+
+		summary, err := bench.Report(context.Background(), config.Load().DestDSN, *table, *csv)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			os.Exit(1)
+		}
+		fmt.Println(summary)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\nusage: cdcctl verify [--timeout 30s]\n", os.Args[1])
-		os.Exit(2)
+		fmt.Fprintf(os.Stderr, "unknown command %q\n", os.Args[1])
+		usage()
 	}
+}
+
+func usage() {
+	fmt.Fprintln(os.Stderr, "usage:")
+	fmt.Fprintln(os.Stderr, "  cdcctl verify  [--timeout 30s]")
+	fmt.Fprintln(os.Stderr, "  cdcctl latency [--table public.observations] [--csv data/latency.csv]")
+	os.Exit(2)
 }

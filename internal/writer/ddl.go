@@ -11,6 +11,15 @@ import (
 	"github.com/BABTUNA/minicdc/internal/events"
 )
 
+// Metadata columns every destination table carries, mirroring how Artie
+// stamps its destinations. They are invisible to verify (which digests only
+// source columns) and power latency measurement: how far behind the source a
+// row landed.
+const (
+	metaCommitTS  = "__minicdc_commit_ts"  // source transaction commit time
+	metaUpdatedAt = "__minicdc_updated_at" // when this writer applied the row
+)
+
 // ddlManager creates destination tables on first sight of a table's events,
 // using the source type names the reader ships in every event. It never
 // queries the source database.
@@ -28,10 +37,14 @@ func (d *ddlManager) ensureTable(ctx context.Context, pool *pgxpool.Pool, evt ev
 	}
 
 	cols := orderedColumns(evt)
-	defs := make([]string, 0, len(cols))
+	defs := make([]string, 0, len(cols)+2)
 	for _, col := range cols {
 		defs = append(defs, fmt.Sprintf("%s %s", quoteIdent(col), destType(evt.Types[col])))
 	}
+	defs = append(defs,
+		quoteIdent(metaCommitTS)+" timestamptz",
+		quoteIdent(metaUpdatedAt)+" timestamptz",
+	)
 
 	pkCols := make([]string, 0, len(evt.PK))
 	for col := range evt.PK {

@@ -22,11 +22,11 @@ func marshalCanonical(m map[string]any) ([]byte, error) {
 // createStaging makes a session-temp copy of the target's shape plus two
 // bookkeeping columns, dropped automatically when the transaction ends.
 func createStaging(ctx context.Context, tx pgx.Tx, rep events.ChangeEvent, cols []string) error {
-	defs := make([]string, 0, len(cols)+2)
+	defs := make([]string, 0, len(cols)+3)
 	for _, col := range cols {
 		defs = append(defs, fmt.Sprintf("%s %s", quoteIdent(col), destType(rep.Types[col])))
 	}
-	defs = append(defs, "__op text NOT NULL", "__unchanged text[]")
+	defs = append(defs, "__op text NOT NULL", "__unchanged text[]", "__commit_ts timestamptz")
 
 	stmt := fmt.Sprintf("CREATE TEMP TABLE %s (%s) ON COMMIT DROP", stagingName, strings.Join(defs, ", "))
 	if _, err := tx.Exec(ctx, stmt); err != nil {
@@ -39,12 +39,12 @@ func createStaging(ctx context.Context, tx pgx.Tx, rep events.ChangeEvent, cols 
 // explicit cast per column ($n::timestamptz etc.), the same conversion a psql
 // literal gets; correct over clever, COPY binary is a later optimization.
 func loadStaging(ctx context.Context, tx pgx.Tx, rep events.ChangeEvent, cols []string, batch []events.ChangeEvent) error {
-	colList := make([]string, 0, len(cols)+2)
+	colList := make([]string, 0, len(cols)+3)
 	for _, col := range cols {
 		colList = append(colList, quoteIdent(col))
 	}
-	colList = append(colList, "__op", "__unchanged")
-	paramsPerRow := len(cols) + 2
+	colList = append(colList, "__op", "__unchanged", "__commit_ts")
+	paramsPerRow := len(cols) + 3
 
 	// Chunk to stay far below the 65535 bind-parameter protocol limit.
 	maxRows := 200
@@ -59,11 +59,13 @@ func loadStaging(ctx context.Context, tx pgx.Tx, rep events.ChangeEvent, cols []
 				row = append(row, fmt.Sprintf("$%d::%s", i*paramsPerRow+j+1, destType(rep.Types[col])))
 				args = append(args, toParam(columnValue(evt, col)))
 			}
+			base := i*paramsPerRow + len(cols)
 			row = append(row,
-				fmt.Sprintf("$%d::text", i*paramsPerRow+len(cols)+1),
-				fmt.Sprintf("$%d::text[]", i*paramsPerRow+len(cols)+2),
+				fmt.Sprintf("$%d::text", base+1),
+				fmt.Sprintf("$%d::text[]", base+2),
+				fmt.Sprintf("$%d::timestamptz", base+3),
 			)
-			args = append(args, string(evt.Op), evt.Unchanged)
+			args = append(args, string(evt.Op), evt.Unchanged, evt.CommitTS)
 			placeholders = append(placeholders, "("+strings.Join(row, ", ")+")")
 		}
 
@@ -107,25 +109,29 @@ func mergeStaging(ctx context.Context, tx pgx.Tx, rep events.ChangeEvent, cols [
 		on[i] = fmt.Sprintf("t.%s = s.%s", quoteIdent(col), quoteIdent(col))
 	}
 
-	updateClause := ""
-	if len(nonPK) > 0 {
-		sets := make([]string, len(nonPK))
-		for i, col := range nonPK {
-			q := quoteIdent(col)
-			sets[i] = fmt.Sprintf("%s = CASE WHEN %s = ANY(s.__unchanged) THEN t.%s ELSE s.%s END",
-				q, quoteLiteral(col), q, q)
-		}
-		updateClause = "WHEN MATCHED THEN UPDATE SET " + strings.Join(sets, ", ")
-	} else {
-		updateClause = "WHEN MATCHED THEN DO NOTHING"
-	}
+	// Metadata columns are always set: source commit time from staging, apply
+	// time from the destination's clock at merge. statement_timestamp() is the
+	// wall clock now, not the transaction start.
+	metaSets := fmt.Sprintf("%s = s.__commit_ts, %s = statement_timestamp()",
+		quoteIdent(metaCommitTS), quoteIdent(metaUpdatedAt))
 
-	allQuoted := make([]string, len(cols))
-	fromStaging := make([]string, len(cols))
-	for i, col := range cols {
-		allQuoted[i] = quoteIdent(col)
-		fromStaging[i] = "s." + quoteIdent(col)
+	sets := make([]string, 0, len(nonPK)+1)
+	for _, col := range nonPK {
+		q := quoteIdent(col)
+		sets = append(sets, fmt.Sprintf("%s = CASE WHEN %s = ANY(s.__unchanged) THEN t.%s ELSE s.%s END",
+			q, quoteLiteral(col), q, q))
 	}
+	sets = append(sets, metaSets)
+	updateClause := "WHEN MATCHED THEN UPDATE SET " + strings.Join(sets, ", ")
+
+	allQuoted := make([]string, 0, len(cols)+2)
+	fromStaging := make([]string, 0, len(cols)+2)
+	for _, col := range cols {
+		allQuoted = append(allQuoted, quoteIdent(col))
+		fromStaging = append(fromStaging, "s."+quoteIdent(col))
+	}
+	allQuoted = append(allQuoted, quoteIdent(metaCommitTS), quoteIdent(metaUpdatedAt))
+	fromStaging = append(fromStaging, "s.__commit_ts", "statement_timestamp()")
 
 	stmt := fmt.Sprintf(`
 MERGE INTO %s AS t
