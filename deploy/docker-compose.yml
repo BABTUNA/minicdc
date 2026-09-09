@@ -1,0 +1,55 @@
+# Three services: the source database (Artie's terra fixture), the Kafka
+# buffer (Redpanda), and an empty destination Postgres playing warehouse.
+# Run ./fetch-terra.sh once first: it clones artie-labs/terra, whose init SQL
+# (schema + seed + publication) is mounted into the source container.
+services:
+  source:
+    image: postgres:16
+    container_name: minicdc-source
+    environment:
+      POSTGRES_PASSWORD: minicdc
+      POSTGRES_DB: terra
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    ports:
+      - "5410:5432"
+    volumes:
+      - ./terra/pg/init:/docker-entrypoint-initdb.d:ro
+      - source_pgdata:/var/lib/postgresql/data
+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.4
+    container_name: minicdc-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --node-id=0
+      - --kafka-addr=INTERNAL://0.0.0.0:9092,OUTSIDE://0.0.0.0:19092
+      - --advertise-kafka-addr=INTERNAL://redpanda:9092,OUTSIDE://localhost:19092
+    ports:
+      - "19092:19092"
+
+  dest:
+    image: postgres:16
+    container_name: minicdc-dest
+    environment:
+      POSTGRES_PASSWORD: minicdc
+      POSTGRES_DB: warehouse
+    ports:
+      - "5411:5432"
+    volumes:
+      - dest_pgdata:/var/lib/postgresql/data
+
+volumes:
+  source_pgdata:
+  dest_pgdata:

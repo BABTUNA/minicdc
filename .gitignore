@@ -1,0 +1,3 @@
+# Terra is cloned by deploy/fetch-terra.sh, never vendored (no license upstream)
+deploy/terra/
+bin/
