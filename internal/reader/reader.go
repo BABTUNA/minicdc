@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
 
+	"github.com/BABTUNA/minicdc/internal/backfill"
 	"github.com/BABTUNA/minicdc/internal/config"
 	"github.com/BABTUNA/minicdc/internal/events"
 )
@@ -32,6 +33,10 @@ type Reader struct {
 	// exclusively after Kafka has confirmed a publish; reporting anything more
 	// optimistic is how CDC pipelines lose data.
 	ackedLSN pglogrepl.LSN
+
+	// slotState carries whether this is a fresh slot (backfill needed) and the
+	// snapshot to read from. Captured at New, consumed by Run before streaming.
+	slotState SlotState
 }
 
 func New(ctx context.Context, cfg config.Config, pub Publisher) (*Reader, error) {
@@ -39,11 +44,12 @@ func New(ctx context.Context, cfg config.Config, pub Publisher) (*Reader, error)
 	if err != nil {
 		return nil, fmt.Errorf("connect to source (replication mode): %w", err)
 	}
-	if err := ensureSlot(ctx, conn, cfg.Slot); err != nil {
+	state, err := ensureSlot(ctx, conn, cfg.Slot)
+	if err != nil {
 		conn.Close(ctx)
 		return nil, err
 	}
-	return &Reader{cfg: cfg, conn: conn, pub: pub, rels: NewRelCache()}, nil
+	return &Reader{cfg: cfg, conn: conn, pub: pub, rels: NewRelCache(), slotState: state}, nil
 }
 
 func (r *Reader) Close(ctx context.Context) error {
@@ -51,6 +57,17 @@ func (r *Reader) Close(ctx context.Context) error {
 }
 
 func (r *Reader) Run(ctx context.Context) error {
+	// A fresh slot exported a snapshot: copy existing rows before streaming.
+	// This must happen while the replication connection is still idle, or the
+	// exported snapshot is invalidated. Backfill uses its own connection.
+	if r.slotState.Fresh {
+		slog.Info("fresh slot: starting backfill", "snapshot", r.slotState.SnapshotName)
+		if err := backfill.Run(ctx, r.cfg.SourceDSN, r.cfg.Publication, r.slotState.SnapshotName, r.pub); err != nil {
+			return fmt.Errorf("backfill: %w", err)
+		}
+		slog.Info("backfill complete, starting live replication")
+	}
+
 	// startLSN 0 means "resume from the slot's confirmed position": exactly
 	// what we want on both first run and restart.
 	err := pglogrepl.StartReplication(ctx, r.conn, r.cfg.Slot, 0, pglogrepl.StartReplicationOptions{

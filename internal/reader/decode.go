@@ -2,11 +2,11 @@ package reader
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/jackc/pglogrepl"
 
 	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/minicdc/internal/pgval"
 )
 
 // buildChangeEvent turns a pgoutput tuple into our envelope, for inserts
@@ -128,26 +128,8 @@ func decodeTupleColumn(tc *pglogrepl.TupleDataColumn, col Column) (any, error) {
 	case pglogrepl.TupleDataTypeNull:
 		return nil, nil
 	case pglogrepl.TupleDataTypeText:
-		return textToValue(string(tc.Data), col.TypeOID)
+		return pgval.TextToValue(string(tc.Data), col.TypeOID)
 	default:
 		return nil, fmt.Errorf("unsupported tuple data type %q", tc.DataType)
-	}
-}
-
-// textToValue converts pgoutput's text representation into a JSON-friendly Go
-// value. Integers and bools become typed; everything else (numeric, timestamps,
-// text, enums) stays a string, which Postgres happily casts back on insert.
-func textToValue(s string, typeOID uint32) (any, error) {
-	switch typeOID {
-	case 20, 21, 23: // int8, int2, int4
-		n, err := strconv.ParseInt(s, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parse int %q: %w", s, err)
-		}
-		return n, nil
-	case 16: // bool
-		return s == "t", nil
-	default:
-		return s, nil
 	}
 }

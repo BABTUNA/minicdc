@@ -14,6 +14,7 @@ const (
 	OpCreate Op = "c"
 	OpUpdate Op = "u"
 	OpDelete Op = "d"
+	OpRead   Op = "r" // snapshot read (backfill); applied as an upsert
 )
 
 // ChangeEvent is the envelope every change travels in between the reader and

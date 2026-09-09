@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pglogrepl"
+
+	"github.com/BABTUNA/minicdc/internal/pgval"
 )
 
 // Relation is our cached view of a table's schema, built from pgoutput
@@ -39,7 +41,7 @@ func (c *RelCache) Store(msg *pglogrepl.RelationMessageV2) {
 		rel.Columns = append(rel.Columns, Column{
 			Name:     col.Name,
 			TypeOID:  col.DataType,
-			TypeName: typeNameForOID(col.DataType),
+			TypeName: pgval.TypeNameForOID(col.DataType),
 			IsKey:    col.Flags&1 != 0,
 		})
 	}
@@ -56,42 +58,3 @@ func (c *RelCache) Get(relID uint32) (Relation, error) {
 	return rel, nil
 }
 
-// typeNameForOID maps built-in Postgres type OIDs to type names the writer can
-// use in destination DDL. Anything unknown (notably enums, which get dynamic
-// OIDs) lands as text: correct as data, lossy as DDL, revisited in phase 5.
-func typeNameForOID(oid uint32) string {
-	switch oid {
-	case 16:
-		return "boolean"
-	case 20:
-		return "bigint"
-	case 21:
-		return "smallint"
-	case 23:
-		return "integer"
-	case 25:
-		return "text"
-	case 700:
-		return "real"
-	case 701:
-		return "double precision"
-	case 1042:
-		return "text" // bpchar
-	case 1043:
-		return "text" // varchar; length limit not carried over
-	case 1082:
-		return "date"
-	case 1114:
-		return "timestamp"
-	case 1184:
-		return "timestamptz"
-	case 1700:
-		return "numeric"
-	case 2950:
-		return "uuid"
-	case 3802:
-		return "jsonb"
-	default:
-		return "text"
-	}
-}
