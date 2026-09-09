@@ -54,22 +54,27 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="backfill" value="Fresh slot: EXPORT_SNAPSHOT backfills existing rows, then streams from that WAL position — gapless." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
-          <mxGeometry x="60" y="430" width="440" height="60" as="geometry" />
+        <mxCell id="v1" value="reads source" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;endArrow=open;dashed=1;strokeColor=#6c8ebf;fontColor=#6c8ebf;exitX=0;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="verify" target="src">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="15" y="655" /><mxPoint x="15" y="245" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v2" value="reads destination" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;endArrow=open;dashed=1;strokeColor=#6c8ebf;fontColor=#6c8ebf;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="verify" target="dst">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1805" y="655" /><mxPoint x="1805" y="245" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="backfill" value="Startup: on a fresh replication slot the Reader first backfills every existing row from an exported snapshot, then switches to live streaming at that same WAL position — no gap, no overlap." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="450" width="560" height="70" as="geometry" />
         </mxCell>
 
         <mxCell id="guarantee" value="Guarantee: kill any component mid-stream and restart — the copy stays exact. No loss, no duplication." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="60" y="520" width="900" height="30" as="geometry" />
+          <mxGeometry x="120" y="550" width="900" height="30" as="geometry" />
         </mxCell>
 
         <mxCell id="verify" value="cdcctl verify&#xa;&#xa;checksums both databases&#xa;the independent judge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="800" y="590" width="280" height="110" as="geometry" />
-        </mxCell>
-        <mxCell id="v1" value="read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;endArrow=open;dashed=1;strokeColor=#6c8ebf;" edge="1" parent="1" source="verify" target="src">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="v2" value="read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;endArrow=open;dashed=1;strokeColor=#6c8ebf;" edge="1" parent="1" source="verify" target="dst">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry x="770" y="600" width="280" height="110" as="geometry" />
         </mxCell>
 
       </root>
