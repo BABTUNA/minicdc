@@ -15,8 +15,12 @@ VALUES (500, 'Load Pan', 'Load Region', -1.0, 30.0)
 ON CONFLICT DO NOTHING;
 SQL
 
+# Unique id base per run (seconds since epoch, mod 1e6) so repeated demo runs
+# do not collide on primary keys. Stays well under int4 range.
+BASE=$(( 100000 + ($(date +%s) % 1000000) ))
+
 for i in $(seq 1 "$ITERATIONS"); do
-  id=$((100000 + i))
+  id=$((BASE + i))
   $PSQL <<SQL
 INSERT INTO animals (animal_id, name, species, home_watering_hole_id, status)
 VALUES ($id, 'load-$i', 'impala', 500, 'adult');

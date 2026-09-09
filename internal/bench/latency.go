@@ -25,13 +25,22 @@ type Bucket struct {
 }
 
 // Report queries per-minute latency for a destination table, writes a CSV, and
-// returns an overall summary line.
-func Report(ctx context.Context, destDSN, table, csvPath string) (string, error) {
+// returns an overall summary line. A non-zero since limits the measurement to
+// rows applied within that window, which isolates streaming latency from
+// backfill rows (all stamped at backfill time).
+func Report(ctx context.Context, destDSN, table, csvPath string, since time.Duration) (string, error) {
 	pool, err := pgxpool.New(ctx, destDSN)
 	if err != nil {
 		return "", err
 	}
 	defer pool.Close()
+
+	where := "__minicdc_updated_at IS NOT NULL AND __minicdc_commit_ts IS NOT NULL"
+	var args []any
+	if since > 0 {
+		where += " AND __minicdc_updated_at >= $1"
+		args = append(args, time.Now().Add(-since))
+	}
 
 	query := fmt.Sprintf(`
 SELECT date_trunc('minute', __minicdc_updated_at) AS minute,
@@ -40,10 +49,10 @@ SELECT date_trunc('minute', __minicdc_updated_at) AS minute,
        percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM __minicdc_updated_at - __minicdc_commit_ts)),
        max(extract(epoch FROM __minicdc_updated_at - __minicdc_commit_ts))
 FROM %s
-WHERE __minicdc_updated_at IS NOT NULL AND __minicdc_commit_ts IS NOT NULL
-GROUP BY 1 ORDER BY 1`, quoteTable(table))
+WHERE %s
+GROUP BY 1 ORDER BY 1`, quoteTable(table), where)
 
-	rows, err := pool.Query(ctx, query)
+	rows, err := pool.Query(ctx, query, args...)
 	if err != nil {
 		return "", fmt.Errorf("latency query: %w", err)
 	}
