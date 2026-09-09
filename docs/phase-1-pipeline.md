@@ -92,29 +92,77 @@ Kafka message value. Message key is `table + PK json` so one row's events always
 
 `op` is `c`/`u`/`d` (Debezium's convention). `after` is the full row, null for deletes (phase 2). `lsn` and `commit_ts` come from the CommitMessage, not the row.
 
-### 2. pgoutput messages (Postgres to us, binary)
+### 2. pgoutput messages (Postgres to us; binary on the wire, shown decoded)
 
-The reader decodes three types in phase 1:
+The reader handles three types in phase 1:
 
-| Message | Carries | We do |
-| --- | --- | --- |
-| Relation | relID, table name, column names, type OIDs, PK flags | cache it; needed to decode any row from that table |
-| Insert | relID + tuple (column values as text/binary) | look up relID in cache, zip cols with values, build ChangeEvent |
-| Commit | commit LSN + commit timestamp | stamp buffered events, publish, then advance ack |
+```json
+// Relation: "here's what table 16388 looks like", arrives once, we cache it
+{
+  "relation_id": 16388,
+  "table": "public.animals",
+  "columns": [
+    {"name": "animal_id", "type_oid": 23, "is_pk": true},
+    {"name": "name",      "type_oid": 25, "is_pk": false},
+    {"name": "species",   "type_oid": 24754, "is_pk": false}
+  ]
+}
 
-Trap: Postgres sends Relation once per connection before the first row of that table. A tuple with an unknown relID is a bug, fail loudly.
+// Insert: "a row for 16388", no names, no types, just positions
+{
+  "relation_id": 16388,
+  "tuple": ["9999", "Testo", "lion"]
+}
+
+// Commit: "that transaction is real, here's where and when"
+{
+  "commit_lsn": 24605072,
+  "commit_ts": "2026-09-08T18:04:11.902Z"
+}
+```
+
+```text
+Relation ──▶ cache          (must arrive first; unknown relation_id later = fail loudly)
+Insert   ──▶ cache ⋈ tuple ──▶ ChangeEvent ──▶ txnBuffer
+Commit   ──▶ stamp buffer ──▶ publish ──▶ ackedLSN advances
+```
 
 ### 3. LSN (log sequence number)
 
-A `uint64` byte-position in the WAL, printed as `0/1776A10`. It is the single currency of progress on the read side: where to start replication, what to ack, what phase 4 will use as the snapshot boundary. Monotonic per server.
+One `uint64`, a byte-offset into the WAL: `24605072` (printed `0/1776A10`).
 
-### 4. Standby status update (us to Postgres)
+```text
+0 ──────────────────────────────────────────────▶ WAL grows forever
+                    ▲                    ▲
+                ackedLSN            commit_lsn of newest txn
+          "safe to discard below"   "we are this far behind"
+```
 
-Tiny periodic message: "I have durably processed up to LSN X." Postgres uses it to decide what WAL it may recycle. Sent on keepalive request or timer. Reporting an LSN we have not truly secured is the classic way CDC loses data, so it only ever carries `ackedLSN`.
+The same number is used for: where to resume replication, what to ack, and the phase 4 snapshot boundary. Monotonic per server.
 
-### 5. Type mapping (source col types to dest DDL)
+### 4. Standby status update (us to Postgres, every 5s or on request)
 
-Phase 1 keeps a small map in `typemap.go`: ints, text, numeric, timestamptz, bool pass through; enums land as `text`; anything unknown lands as `text` with a logged warning. Revisit in phase 5.
+```json
+{"write": 24605080, "flush": 24605080, "apply": 24605080}
+```
+
+```text
+rule: these fields only ever carry ackedLSN,
+      and ackedLSN only advances after a Kafka ack.
+      one optimistic report here = the one way this system loses data
+```
+
+Postgres uses it to decide what WAL it may recycle, and it's where a restarted reader resumes.
+
+### 5. Type mapping (source col types to dest DDL, `typemap.go`)
+
+```text
+integer, bigint, smallint  ──▶ same
+text, numeric, boolean     ──▶ same
+timestamptz, date, uuid    ──▶ same
+enum (dynamic OID)         ──▶ text     data survives, type identity lost, phase 5
+anything unknown           ──▶ text     never reject a value, degrade it
+```
 
 ## Explicitly out of scope
 
