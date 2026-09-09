@@ -26,6 +26,14 @@ show_dest() {
 }
 settle() { printf '   \033[2m(waiting ~2s for the change to stream through)\033[0m\n'; sleep 3; }
 
+# Make the script safe to re-run without a full reset: stop any stream still
+# running from a previous run and clear rows earlier runs created (seed rows
+# use small ids, everything demo-generated uses ids >= 100000).
+pkill -f 'scripts/load.sh' 2>/dev/null || true
+SRC_EXEC -qc "DELETE FROM observations WHERE observation_id >= 100000;" >/dev/null 2>&1 || true
+SRC_EXEC -qc "DELETE FROM animals WHERE animal_id >= 100000;" >/dev/null 2>&1 || true
+sleep 1
+
 bold "Following one animal, id $ID, through the pipeline"
 why "it does not exist yet on either side"
 show_source
