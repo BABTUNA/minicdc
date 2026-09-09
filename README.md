@@ -32,6 +32,19 @@ See it arrive in the destination a second later:
 docker exec minicdc-dest psql -U postgres -d warehouse -c "SELECT animal_id, name, __minicdc_commit_ts, __minicdc_updated_at FROM public.animals WHERE animal_id = 9999;"
 ```
 
+## Demo
+
+Four narrated scripts. Each prints what it runs and why. Run setup once, then the three beats in any order:
+
+```bash
+./scripts/demo-setup.sh       # clean, seeded source; destination backfilled; pipeline live
+./scripts/demo-replicate.sh   # a row through insert/update/delete, then bulk ops under a live stream
+./scripts/demo-crash.sh       # kill the writer mid-stream, restart, prove the copy is still exact
+./scripts/demo-latency.sh     # sustained load, then report streaming latency
+```
+
+`demo-replicate.sh` shows the source and destination tables after each change so you watch the row appear, change, and vanish on both sides; the others print source-vs-destination counts at the moments that matter and finish with `VERIFY: all 3 tables MATCH`. All are safe to re-run without re-running setup.
+
 ## Guarantees
 
 - **No loss, no duplication under crashes.** The reader acks a WAL position to Postgres only after Kafka confirms the events; the writer commits a Kafka offset only after the destination transaction commits. A `kill -9` of either side re-delivers a batch, and the writer's merge re-asserts the same final state, so replays are harmless. Proven, not asserted: `scripts/crash-test.sh` kills both processes mid-load and requires `cdcctl verify` to report an exact match.
