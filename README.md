@@ -51,15 +51,20 @@ Four narrated scripts. Each prints what it runs and why. Run setup once, then th
 - **Backfill to live, gapless.** A fresh pipeline copies existing rows from a snapshot exported at slot creation, then streams from that exact WAL position. `scripts/backfill-test.sh` seeds the source, writes concurrently during backfill, and verifies.
 - **Correct on the hard cases.** Unchanged TOAST columns are preserved rather than nulled; primary-key-changing updates become delete+insert; multi-row transactions stay ordered per row via table+PK Kafka keys.
 
-## Measured latency
+## Why streaming: CDC vs batch snapshots
 
-Streaming latency under sustained mixed load, measured Artie's way (source commit time vs destination apply time, both stamped on every row):
+Latency is measured the way Artie's benchmarks repo does: stamp the source commit time on every row, diff it against the destination apply time. But a latency number needs a baseline to mean anything. The honest baseline is the pre-CDC alternative: periodically re-copy the table (batch snapshots). A snapshot's freshness floor is how long one full copy takes, and that grows with the table, while streaming CDC only ever touches the change:
 
-```
-avg 1.1s / p95 2s / max 2s end-to-end
-```
+| rows | batch snapshot copy | streaming CDC (ours) |
+| ---: | --- | --- |
+| 10K | 0.20s | 1.1s |
+| 100K | 0.55s | 1.1s |
+| 1M | 2.51s | 1.1s |
+| 10M | 44.2s | 1.1s |
 
-Laptop numbers (a colima VM, single Redpanda broker, Postgres to Postgres), not a production comparison. Latency is set by the writer's 2s flush interval, a deliberate latency-versus-merge-cost knob (Artie's "multi-step merge" tradeoff), not a ceiling. Reproduce with `scripts/bench.sh`.
+At small scale the snapshot wins: our 1.1s is just the flush interval, and copying 10K rows is trivial. The lines cross near 1M, and past it batch copy climbs linearly (extrapolating, ~5 min at 100M) while CDC stays flat. That gap is the entire reason log-based CDC exists, and it is why nobody keeps a large production database fresh by re-copying it.
+
+Laptop numbers (a colima VM, single Redpanda broker, Postgres to Postgres); the shape matters, not the absolute values. CDC latency here is set by the writer's 2s flush interval, a deliberate latency-versus-merge-cost knob (Artie's "multi-step merge" tradeoff), not a ceiling. Reproduce with `scripts/bench-vs-batch.sh`.
 
 ## Commands
 
