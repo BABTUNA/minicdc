@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="drawio" version="31.3.1">
   <diagram name="minicdc Architecture">
-    <mxGraphModel dx="1600" dy="820" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1700" pageHeight="900" background="#ffffff">
+    <mxGraphModel dx="1600" dy="820" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1820" pageHeight="820" background="#ffffff">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -11,65 +11,65 @@
         </mxCell>
 
         <mxCell id="pipe" value="Streaming pipeline" style="swimlane;startSize=36;horizontal=1;rounded=1;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=18;fontStyle=1;container=1;collapsible=0;pointerEvents=0;" vertex="1" parent="1">
-          <mxGeometry x="40" y="80" width="1620" height="300" as="geometry" />
+          <mxGeometry x="40" y="80" width="1740" height="320" as="geometry" />
         </mxCell>
 
-        <mxCell id="src" value="Source Postgres&#xa;(terra)&#xa;write-ahead log" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="pipe">
+        <mxCell id="src" value="Source Postgres&#xa;terra · WAL" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="pipe">
           <mxGeometry x="40" y="110" width="150" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="reader" value="Reader&#xa;&#xa;logical replication slot&#xa;pgoutput decode&#xa;relation cache, per-txn buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="pipe">
-          <mxGeometry x="270" y="105" width="210" height="120" as="geometry" />
+        <mxCell id="reader" value="Reader&#xa;&#xa;pgoutput decode&#xa;relation cache + buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="pipe">
+          <mxGeometry x="380" y="110" width="200" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="kafka" value="Redpanda (Kafka)&#xa;&#xa;topic cdc.events&#xa;keyed by table + PK&#xa;durable replay buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;" vertex="1" parent="pipe">
-          <mxGeometry x="560" y="105" width="210" height="120" as="geometry" />
+        <mxCell id="kafka" value="Redpanda (Kafka)&#xa;&#xa;topic cdc.events&#xa;keyed by table + PK" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;" vertex="1" parent="pipe">
+          <mxGeometry x="770" y="110" width="200" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="writer" value="Writer&#xa;&#xa;buffer, dedupe / fold&#xa;temp staging table&#xa;one MERGE per txn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="pipe">
-          <mxGeometry x="850" y="105" width="210" height="120" as="geometry" />
+        <mxCell id="writer" value="Writer&#xa;&#xa;dedupe + staging&#xa;one MERGE per txn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="pipe">
+          <mxGeometry x="1160" y="110" width="200" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="dst" value="Destination Postgres&#xa;(warehouse)&#xa;the live copy" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="pipe">
-          <mxGeometry x="1140" y="110" width="160" height="110" as="geometry" />
-        </mxCell>
-
-        <mxCell id="e1" value="WAL (pgoutput)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="src" target="reader">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e2" value="ChangeEvent JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="reader" target="kafka">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e3" value="consume&#xa;(group offset)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="kafka" target="writer">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e4" value="staging + MERGE&#xa;(one transaction)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="writer" target="dst">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="dst" value="Destination Postgres&#xa;warehouse" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="pipe">
+          <mxGeometry x="1550" y="110" width="160" height="110" as="geometry" />
         </mxCell>
 
-        <mxCell id="ack1" value="acks WAL position to Postgres&#xa;ONLY after Kafka confirms&#xa;→ nothing lost if the reader dies" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;endArrow=open;strokeColor=#b85450;fontColor=#b85450;exitX=0.25;exitY=1;entryX=0.75;entryY=1;" edge="1" parent="pipe" source="reader" target="src">
+        <mxCell id="e1" value="WAL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="src" target="reader">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="JSON events" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="reader" target="kafka">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="consume" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="kafka" target="writer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="MERGE" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=12;endArrow=block;strokeColor=#333333;strokeWidth=2;" edge="1" parent="pipe" source="writer" target="dst">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ack1" value="acks WAL only after Kafka confirms" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;endArrow=open;strokeColor=#b85450;fontColor=#b85450;exitX=0.2;exitY=1;entryX=0.75;entryY=1;" edge="1" parent="pipe" source="reader" target="src">
           <mxGeometry relative="1" as="geometry">
-            <Array as="points"><mxPoint x="290" y="270" /><mxPoint x="150" y="270" /></Array>
+            <Array as="points"><mxPoint x="420" y="280" /><mxPoint x="150" y="280" /></Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="ack2" value="commits Kafka offset&#xa;ONLY after the destination txn commits&#xa;→ replays converge (idempotent MERGE)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;endArrow=open;strokeColor=#b85450;fontColor=#b85450;exitX=0.25;exitY=1;entryX=0.75;entryY=1;" edge="1" parent="pipe" source="writer" target="kafka">
+        <mxCell id="ack2" value="commits offset only after dest txn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;endArrow=open;strokeColor=#b85450;fontColor=#b85450;exitX=0.2;exitY=1;entryX=0.75;entryY=1;" edge="1" parent="pipe" source="writer" target="kafka">
           <mxGeometry relative="1" as="geometry">
-            <Array as="points"><mxPoint x="870" y="270" /><mxPoint x="730" y="270" /></Array>
+            <Array as="points"><mxPoint x="1200" y="280" /><mxPoint x="920" y="280" /></Array>
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="backfill" value="On a fresh slot: EXPORT_SNAPSHOT copies existing rows (backfill), then streaming starts from that exact WAL position — gapless, no overlap." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
-          <mxGeometry x="60" y="410" width="470" height="70" as="geometry" />
+        <mxCell id="backfill" value="Fresh slot: EXPORT_SNAPSHOT backfills existing rows, then streams from that WAL position — gapless." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="430" width="440" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="verify" value="cdcctl verify&#xa;&#xa;checksums every table on both databases&#xa;(count + ordered digest); knows nothing&#xa;about the pipeline — the independent judge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="700" y="560" width="300" height="120" as="geometry" />
+        <mxCell id="guarantee" value="Guarantee: kill any component mid-stream and restart — the copy stays exact. No loss, no duplication." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="60" y="520" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="verify" value="cdcctl verify&#xa;&#xa;checksums both databases&#xa;the independent judge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="590" width="280" height="110" as="geometry" />
         </mxCell>
         <mxCell id="v1" value="read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;endArrow=open;dashed=1;strokeColor=#6c8ebf;" edge="1" parent="1" source="verify" target="src">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="v2" value="read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;endArrow=open;dashed=1;strokeColor=#6c8ebf;" edge="1" parent="1" source="verify" target="dst">
           <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="legend" value="Guarantee: kill any component mid-stream and restart — the destination stays an exact copy. No loss, no duplication." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="60" y="500" width="900" height="30" as="geometry" />
         </mxCell>
 
       </root>
