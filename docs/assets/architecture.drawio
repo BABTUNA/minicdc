@@ -65,11 +65,11 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="backfill" value="Startup: on a fresh replication slot the Reader first backfills every existing row from an exported snapshot, then switches to live streaming at that same WAL position — no gap, no overlap." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;" vertex="1" parent="1">
-          <mxGeometry x="120" y="450" width="560" height="70" as="geometry" />
+        <mxCell id="backfill" value="Startup: on a fresh slot the Reader backfills existing rows from a snapshot, then streams live from that WAL position. No gap, no overlap." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="455" width="520" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="guarantee" value="Guarantee: kill any component mid-stream and restart — the copy stays exact. No loss, no duplication." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
+        <mxCell id="guarantee" value="Guarantee: kill any component mid-stream and restart. The copy stays exact: no loss, no duplication." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
           <mxGeometry x="120" y="550" width="900" height="30" as="geometry" />
         </mxCell>
 
