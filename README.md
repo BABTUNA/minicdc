@@ -34,7 +34,7 @@ docker exec minicdc-dest psql -U postgres -d warehouse -c "SELECT animal_id, nam
 
 ## Demo
 
-Four narrated scripts. Each prints what it runs and why. Run setup once, then the three beats in any order:
+Narrated scripts, each prints what it runs and why. Run setup once, then the beats in any order:
 
 ```bash
 ./scripts/demo-setup.sh       # clean, seeded source; destination backfilled; pipeline live
@@ -43,7 +43,14 @@ Four narrated scripts. Each prints what it runs and why. Run setup once, then th
 ./scripts/demo-latency.sh     # sustained load, then report streaming latency
 ```
 
-`demo-replicate.sh` shows the source and destination tables after each change so you watch the row appear, change, and vanish on both sides; the others print source-vs-destination counts at the moments that matter and finish with `VERIFY: all 3 tables MATCH`. All are safe to re-run without re-running setup.
+Optional, to see the data itself and the CDC-vs-batch comparison:
+
+```bash
+./scripts/open-db-gui.sh      # open both databases in TablePlus (source + destination), preconfigured
+./scripts/bench-vs-batch.sh   # streaming CDC vs batch snapshot copy, across table sizes
+```
+
+`demo-replicate.sh` shows the source and destination tables after each change so you watch the row appear, change, and vanish on both sides; the others print source-vs-destination counts at the moments that matter and finish with `VERIFY: all 3 tables MATCH`. All are safe to re-run without re-running setup. `open-db-gui.sh` needs TablePlus (`brew install --cask tableplus`).
 
 ## Guarantees
 
