@@ -10,23 +10,26 @@ The source fixture is Artie's own [terra](https://github.com/artie-labs/terra) d
 
 ## Run it
 
-```bash
-cd deploy
-./fetch-terra.sh          # clones the terra source fixture
-docker compose up -d      # source pg + redpanda + dest pg
+Everything below runs from the repo root and needs only Docker and Go.
 
-go run ./cmd/reader &     # WAL -> Kafka
-go run ./cmd/writer &     # Kafka -> destination
+```bash
+./deploy/fetch-terra.sh                             # one-time: clone the terra source fixture
+docker compose -f deploy/docker-compose.yml up -d   # source pg + redpanda + dest pg
+go build ./...                                      # build the binaries into bin/
+./bin/reader &                                       # WAL -> Kafka
+./bin/writer &                                       # Kafka -> destination
 ```
 
-Then watch a change flow through:
+Insert a row on the source:
 
 ```bash
-psql postgres://postgres:minicdc@localhost:5410/terra \
-  -c "INSERT INTO animals (animal_id, name, species, home_watering_hole_id, status) VALUES (9999, 'Testo', 'lion', 1, 'adult');"
+docker exec minicdc-source psql -U postgres -d terra -c "INSERT INTO animals (animal_id, name, species, home_watering_hole_id, status) VALUES (9999, 'Testo', 'lion', 1, 'adult');"
+```
 
-psql postgres://postgres:minicdc@localhost:5411/warehouse \
-  -c "SELECT name FROM public.animals WHERE animal_id = 9999;"
+See it arrive in the destination a second later:
+
+```bash
+docker exec minicdc-dest psql -U postgres -d warehouse -c "SELECT animal_id, name, __minicdc_commit_ts, __minicdc_updated_at FROM public.animals WHERE animal_id = 9999;"
 ```
 
 ## Guarantees
