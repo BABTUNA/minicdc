@@ -8,7 +8,15 @@ source Postgres ──WAL──▶ reader ──▶ Redpanda ──▶ writer �
 
 The source fixture is Artie's own [terra](https://github.com/artie-labs/terra) demo dataset, run unmodified.
 
-**▶ [Watch the demo](https://www.youtube.com/watch?v=_2bagFk1CLk)** — a walkthrough of the architecture, a live run, and the code.
+### ▶ Demo video
+
+A walkthrough of the architecture, a live run, and the code.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=_2bagFk1CLk">
+    <img src="https://img.youtube.com/vi/_2bagFk1CLk/maxresdefault.jpg" width="640" alt="Watch the minicdc demo">
+  </a>
+</p>
 
 ## Architecture
 
