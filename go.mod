@@ -1,4 +1,4 @@
-module github.com/BABTUNA/minicdc
+module github.com/BABTUNA/bartie
 
 go 1.27.0
 

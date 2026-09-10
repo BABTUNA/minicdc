@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 func TestOrderedColumnsIsStable(t *testing.T) {

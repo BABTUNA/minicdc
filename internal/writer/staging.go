@@ -8,10 +8,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
-const stagingName = "_minicdc_staging"
+const stagingName = "_bartie_staging"
 
 // marshalCanonical exists for pkKey: encoding/json sorts map keys, so equal
 // PK maps always produce equal strings.

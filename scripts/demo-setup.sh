@@ -10,8 +10,8 @@ bold() { printf '\n\033[1m== %s\033[0m\n' "$1"; }        # step heading
 why()  { printf '   \033[2m%s\033[0m\n' "$1"; }          # one-line explanation
 run()  { printf '   $ %s\n' "$*"; "$@"; }                # show the command, then run it
 
-SRC="docker exec minicdc-source psql -U postgres -d terra -tAc"
-DST="docker exec minicdc-dest psql -U postgres -d warehouse -tAc"
+SRC="docker exec bartie-source psql -U postgres -d terra -tAc"
+DST="docker exec bartie-dest psql -U postgres -d warehouse -tAc"
 
 bold "1/5  Stop any leftover pipeline processes"
 why "old readers hold the replication slot and block a fresh start"
@@ -33,8 +33,8 @@ run go build -o bin/cdcctl ./cmd/cdcctl
 
 bold "4/5  Start the pipeline"
 why "a fresh slot triggers a backfill of the seed, then live streaming"
-run bash -c './bin/reader > /tmp/minicdc-reader.log 2>&1 & echo reader pid $!'
-run bash -c './bin/writer > /tmp/minicdc-writer.log 2>&1 & echo writer pid $!'
+run bash -c './bin/reader > /tmp/bartie-reader.log 2>&1 & echo reader pid $!'
+run bash -c './bin/writer > /tmp/bartie-writer.log 2>&1 & echo writer pid $!'
 
 bold "5/5  Wait for the backfill to finish"
 why "destination row count should catch up to the source"
@@ -52,8 +52,8 @@ printf '\n'
 
 if [ "${dst_rows:-0}" = "$src_rows" ]; then
   printf '\n\033[1;32mREADY\033[0m  source and destination both at %s observations, pipeline live.\n' "$src_rows"
-  printf 'The reader and writer are running in the background (logs in /tmp/minicdc-*.log).\n'
+  printf 'The reader and writer are running in the background (logs in /tmp/bartie-*.log).\n'
 else
-  printf '\n\033[1;31mNOT READY\033[0m  backfill did not converge (%s vs %s). Check /tmp/minicdc-*.log\n' "${dst_rows:-0}" "$src_rows"
+  printf '\n\033[1;31mNOT READY\033[0m  backfill did not converge (%s vs %s). Check /tmp/bartie-*.log\n' "${dst_rows:-0}" "$src_rows"
   exit 1
 fi

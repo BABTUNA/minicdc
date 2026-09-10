@@ -11,8 +11,8 @@ bold() { printf '\n\033[1m== %s\033[0m\n' "$1"; }
 why()  { printf '   \033[2m%s\033[0m\n' "$1"; }
 run()  { printf '   $ %s\n' "$*"; "$@"; }
 
-SRC="docker exec minicdc-source psql -U postgres -d terra -tAc"
-DST="docker exec minicdc-dest psql -U postgres -d warehouse -tAc"
+SRC="docker exec bartie-source psql -U postgres -d terra -tAc"
+DST="docker exec bartie-dest psql -U postgres -d warehouse -tAc"
 
 counts() {
   local s d
@@ -25,7 +25,7 @@ ITER="${1:-150}"
 
 bold "1/5  Start a stream of live changes"
 why "inserts, updates and deletes flowing into the source in the background"
-run bash -c "./scripts/load.sh $ITER > /tmp/minicdc-load.log 2>&1 & echo load pid \$!"
+run bash -c "./scripts/load.sh $ITER > /tmp/bartie-load.log 2>&1 & echo load pid \$!"
 sleep 5
 why "source and destination climbing together, a second or so apart:"
 counts
@@ -39,7 +39,7 @@ counts
 
 bold "3/5  Restart the writer"
 why "it rejoins, replays from its last committed offset, and the merge re-asserts each row"
-run bash -c './bin/writer > /tmp/minicdc-writer.log 2>&1 & echo writer pid $!'
+run bash -c './bin/writer > /tmp/bartie-writer.log 2>&1 & echo writer pid $!'
 
 bold "4/5  Let the load finish and the destination catch up"
 why "waiting for the write workload to drain"

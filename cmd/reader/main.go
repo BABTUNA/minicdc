@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/BABTUNA/minicdc/internal/config"
-	"github.com/BABTUNA/minicdc/internal/reader"
-	"github.com/BABTUNA/minicdc/internal/sink"
+	"github.com/BABTUNA/bartie/internal/config"
+	"github.com/BABTUNA/bartie/internal/reader"
+	"github.com/BABTUNA/bartie/internal/sink"
 )
 
 func main() {

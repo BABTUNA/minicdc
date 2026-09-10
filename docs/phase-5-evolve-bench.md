@@ -3,7 +3,7 @@
 Bonus phase, past the cut line. Two independent pieces, either cuttable:
 
 - **5a Schema evolution:** a column added on the source appears downstream. **Deferred**: the mechanics are understood and documented below, but not built; additive DDL is a nice-to-have, and the hard version (renames, drops, type changes) needs true DDL replication, which is out of scope.
-- **5b Benchmark: BUILT.** Latency measured the way Artie's benchmarks repo does. Every destination row carries two metadata columns, `__minicdc_commit_ts` (source commit time) and `__minicdc_updated_at` (writer apply time); `cdcctl latency` reports per-minute stats and `scripts/bench.sh` drives it. Result on this laptop: streaming avg ~1.1s, p95 ~2s, set by the 2s flush interval. The metadata-column approach turned out cleaner than the doc's original "dedicated bench table" idea and mirrors how Artie stamps its destinations.
+- **5b Benchmark: BUILT.** Latency measured the way Artie's benchmarks repo does. Every destination row carries two metadata columns, `__bartie_commit_ts` (source commit time) and `__bartie_updated_at` (writer apply time); `cdcctl latency` reports per-minute stats and `scripts/bench.sh` drives it. Result on this laptop: streaming avg ~1.1s, p95 ~2s, set by the 2s flush interval. The metadata-column approach turned out cleaner than the doc's original "dedicated bench table" idea and mirrors how Artie stamps its destinations.
 
 Done when:
 

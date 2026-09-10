@@ -22,8 +22,8 @@ until (cd deploy && docker compose exec -T dest pg_isready -U postgres >/dev/nul
 echo "== truncate seed"
 (cd deploy && $PSQL -c "TRUNCATE observations, animals, watering_holes;")
 
-start_reader() { ./bin/reader > /tmp/minicdc-reader.log 2>&1 & READER_PID=$!; }
-start_writer() { ./bin/writer > /tmp/minicdc-writer.log 2>&1 & WRITER_PID=$!; }
+start_reader() { ./bin/reader > /tmp/bartie-reader.log 2>&1 & READER_PID=$!; }
+start_writer() { ./bin/writer > /tmp/bartie-writer.log 2>&1 & WRITER_PID=$!; }
 cleanup() { kill "$READER_PID" "$WRITER_PID" 2>/dev/null || true; }
 trap cleanup EXIT
 
@@ -33,7 +33,7 @@ start_writer
 sleep 3
 
 echo "== start load"
-./scripts/load.sh "${1:-100}" > /tmp/minicdc-load.log 2>&1 &
+./scripts/load.sh "${1:-100}" > /tmp/bartie-load.log 2>&1 &
 LOAD_PID=$!
 
 sleep 10

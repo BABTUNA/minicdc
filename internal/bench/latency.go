@@ -35,19 +35,19 @@ func Report(ctx context.Context, destDSN, table, csvPath string, since time.Dura
 	}
 	defer pool.Close()
 
-	where := "__minicdc_updated_at IS NOT NULL AND __minicdc_commit_ts IS NOT NULL"
+	where := "__bartie_updated_at IS NOT NULL AND __bartie_commit_ts IS NOT NULL"
 	var args []any
 	if since > 0 {
-		where += " AND __minicdc_updated_at >= $1"
+		where += " AND __bartie_updated_at >= $1"
 		args = append(args, time.Now().Add(-since))
 	}
 
 	query := fmt.Sprintf(`
-SELECT date_trunc('minute', __minicdc_updated_at) AS minute,
+SELECT date_trunc('minute', __bartie_updated_at) AS minute,
        count(*),
-       avg(extract(epoch FROM __minicdc_updated_at - __minicdc_commit_ts)),
-       percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM __minicdc_updated_at - __minicdc_commit_ts)),
-       max(extract(epoch FROM __minicdc_updated_at - __minicdc_commit_ts))
+       avg(extract(epoch FROM __bartie_updated_at - __bartie_commit_ts)),
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM __bartie_updated_at - __bartie_commit_ts)),
+       max(extract(epoch FROM __bartie_updated_at - __bartie_commit_ts))
 FROM %s
 WHERE %s
 GROUP BY 1 ORDER BY 1`, quoteTable(table), where)

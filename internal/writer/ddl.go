@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 // Metadata columns every destination table carries, mirroring how Artie
@@ -16,8 +16,8 @@ import (
 // source columns) and power latency measurement: how far behind the source a
 // row landed.
 const (
-	metaCommitTS  = "__minicdc_commit_ts"  // source transaction commit time
-	metaUpdatedAt = "__minicdc_updated_at" // when this writer applied the row
+	metaCommitTS  = "__bartie_commit_ts"  // source transaction commit time
+	metaUpdatedAt = "__bartie_updated_at" // when this writer applied the row
 )
 
 // ddlManager creates destination tables on first sight of a table's events,

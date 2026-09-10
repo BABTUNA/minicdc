@@ -25,7 +25,7 @@ main()                                                    cmd/reader/main.go
 ├── config.Load()                                         internal/config/config.go
 ├── reader.New(cfg)                                       internal/reader/reader.go
 │   ├── pgconn.Connect(dsn + "replication=database")      (pglogrepl requirement)
-│   ├── ensureSlot("minicdc")                             internal/reader/slot.go
+│   ├── ensureSlot("bartie")                             internal/reader/slot.go
 │   │   └── CREATE_REPLICATION_SLOT ... LOGICAL pgoutput  (skip if exists)
 │   └── sink.NewPublisher("cdc.events")                   internal/sink/kafka.go
 └── reader.Run(ctx)                                       internal/reader/reader.go
@@ -56,7 +56,7 @@ Key invariant already in phase 1: `ackedLSN` (what we report to Postgres via sta
 main()                                                    cmd/writer/main.go
 ├── config.Load()                                         internal/config/config.go
 ├── writer.New(cfg)                                       internal/writer/writer.go
-│   ├── kafka.NewReader(group "minicdc-writer")           internal/writer/consumer.go
+│   ├── kafka.NewReader(group "bartie-writer")           internal/writer/consumer.go
 │   └── pgxpool.New(destDSN)
 └── writer.Run(ctx)
     └── for { consumer.FetchMessage() }

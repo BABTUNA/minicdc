@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 // flushTable applies one table's batch inside a single destination

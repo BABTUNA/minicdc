@@ -3,7 +3,7 @@ package writer
 import (
 	"testing"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 func evt(op events.Op, id int, after map[string]any, unchanged ...string) events.ChangeEvent {

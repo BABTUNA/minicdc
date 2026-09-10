@@ -5,7 +5,7 @@ import (
 
 	"github.com/jackc/pglogrepl"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 func testRelation() Relation {

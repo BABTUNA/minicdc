@@ -10,9 +10,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
 
-	"github.com/BABTUNA/minicdc/internal/backfill"
-	"github.com/BABTUNA/minicdc/internal/config"
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/backfill"
+	"github.com/BABTUNA/bartie/internal/config"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 const standbyInterval = 5 * time.Second

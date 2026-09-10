@@ -17,9 +17,9 @@ Done when:
 The whole problem is picking one instant and knowing exactly which changes are before it (copy them) and after it (stream them). Postgres hands us that instant atomically at slot creation:
 
 ```json
-// CREATE_REPLICATION_SLOT minicdc LOGICAL pgoutput EXPORT_SNAPSHOT returns:
+// CREATE_REPLICATION_SLOT bartie LOGICAL pgoutput EXPORT_SNAPSHOT returns:
 {
-  "slot_name": "minicdc",
+  "slot_name": "bartie",
   "consistent_point": "0/1776A10",
   "snapshot_name": "00000003-00000002-1"
 }

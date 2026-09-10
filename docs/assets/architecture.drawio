@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="drawio" version="31.3.1">
-  <diagram name="minicdc Architecture">
+  <diagram name="bartie Architecture">
     <mxGraphModel dx="1600" dy="820" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1820" pageHeight="820" background="#ffffff">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <mxCell id="title" value="minicdc — change data capture pipeline" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="title" value="Bartie change data capture pipeline" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="20" width="700" height="40" as="geometry" />
         </mxCell>
 

@@ -13,8 +13,8 @@ run()  { printf '   $ %s\n' "$*"; "$@"; }
 # Unique id per run so repeated demos never collide on the primary key.
 ID=$(( 900000 + ($(date +%s) % 90000) ))
 
-SRC_EXEC() { docker exec minicdc-source psql -U postgres -d terra "$@"; }
-DST_EXEC() { docker exec minicdc-dest   psql -U postgres -d warehouse "$@"; }
+SRC_EXEC() { docker exec bartie-source psql -U postgres -d terra "$@"; }
+DST_EXEC() { docker exec bartie-dest   psql -U postgres -d warehouse "$@"; }
 
 show_source() {
   printf '\n   \033[36mSOURCE  animals (id %s)\033[0m\n' "$ID"
@@ -22,7 +22,7 @@ show_source() {
 }
 show_dest() {
   printf '   \033[35mDESTINATION  animals (id %s)\033[0m\n' "$ID"
-  DST_EXEC -c "SELECT animal_id, name, status, __minicdc_updated_at FROM animals WHERE animal_id = $ID;"
+  DST_EXEC -c "SELECT animal_id, name, status, __bartie_updated_at FROM animals WHERE animal_id = $ID;"
 }
 settle() { printf '   \033[2m(waiting ~2s for the change to stream through)\033[0m\n'; sleep 3; }
 
@@ -70,14 +70,14 @@ B=$(( 1000000 + ($(date +%s) % 500000) ))
 
 counts() {
   local s d
-  s=$(docker exec minicdc-source psql -U postgres -d terra -tAc "SELECT count(*) FROM animals" 2>/dev/null || echo '?')
-  d=$(docker exec minicdc-dest psql -U postgres -d warehouse -tAc "SELECT count(*) FROM animals" 2>/dev/null || echo '?')
+  s=$(docker exec bartie-source psql -U postgres -d terra -tAc "SELECT count(*) FROM animals" 2>/dev/null || echo '?')
+  d=$(docker exec bartie-dest psql -U postgres -d warehouse -tAc "SELECT count(*) FROM animals" 2>/dev/null || echo '?')
   printf '   \033[1msource %s animals   →   destination %s animals\033[0m\n' "$s" "$d"
 }
 
 bold "4/7  Start a continuous background stream"
 why "sustained insert/update/delete traffic while we also fire bulk operations"
-run bash -c './scripts/load.sh 250 > /tmp/minicdc-load.log 2>&1 & echo stream pid $!'
+run bash -c './scripts/load.sh 250 > /tmp/bartie-load.log 2>&1 & echo stream pid $!'
 
 bold "5/7  Bulk INSERT: 500 rows in one statement"
 why "not one row at a time, a whole batch at once"

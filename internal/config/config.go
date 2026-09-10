@@ -15,11 +15,11 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		SourceDSN:   getenv("MINICDC_SOURCE_DSN", "postgres://postgres:minicdc@localhost:5410/terra"),
-		DestDSN:     getenv("MINICDC_DEST_DSN", "postgres://postgres:minicdc@localhost:5411/warehouse"),
+		SourceDSN:   getenv("MINICDC_SOURCE_DSN", "postgres://postgres:bartie@localhost:5410/terra"),
+		DestDSN:     getenv("MINICDC_DEST_DSN", "postgres://postgres:bartie@localhost:5411/warehouse"),
 		KafkaBroker: getenv("MINICDC_KAFKA_BROKER", "localhost:19092"),
 		Topic:       getenv("MINICDC_TOPIC", "cdc.events"),
-		Slot:        getenv("MINICDC_SLOT", "minicdc"),
+		Slot:        getenv("MINICDC_SLOT", "bartie"),
 		Publication: getenv("MINICDC_PUBLICATION", "dbz_publication"),
 	}
 }

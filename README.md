@@ -1,4 +1,4 @@
-# minicdc
+# Bartie
 
 A small change data capture engine: it watches a Postgres database's write-ahead log and keeps a live copy of its tables in a second database, without losing or duplicating a change. One source, one destination, built from first principles as a study of how systems like [Artie](https://artie.com) work.
 
@@ -14,13 +14,13 @@ A walkthrough of the architecture, a live run, and the code.
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=_2bagFk1CLk">
-    <img src="https://img.youtube.com/vi/_2bagFk1CLk/maxresdefault.jpg" width="640" alt="Watch the minicdc demo">
+    <img src="https://img.youtube.com/vi/_2bagFk1CLk/maxresdefault.jpg" width="640" alt="Watch the Bartie demo">
   </a>
 </p>
 
 ## Architecture
 
-![minicdc architecture](docs/assets/architecture.png)
+![Bartie architecture](docs/assets/architecture.png)
 
 The reader acks a WAL position to Postgres only after Kafka confirms; the writer commits a Kafka offset only after the destination transaction commits. Those two rules are what make a kill of any component survivable. Diagram source (editable): [docs/assets/architecture.drawio](docs/assets/architecture.drawio).
 
@@ -39,13 +39,13 @@ go build ./...                                      # build the binaries into bi
 Insert a row on the source:
 
 ```bash
-docker exec minicdc-source psql -U postgres -d terra -c "INSERT INTO animals (animal_id, name, species, home_watering_hole_id, status) VALUES (9999, 'Testo', 'lion', 1, 'adult');"
+docker exec bartie-source psql -U postgres -d terra -c "INSERT INTO animals (animal_id, name, species, home_watering_hole_id, status) VALUES (9999, 'Testo', 'lion', 1, 'adult');"
 ```
 
 See it arrive in the destination a second later:
 
 ```bash
-docker exec minicdc-dest psql -U postgres -d warehouse -c "SELECT animal_id, name, __minicdc_commit_ts, __minicdc_updated_at FROM public.animals WHERE animal_id = 9999;"
+docker exec bartie-dest psql -U postgres -d warehouse -c "SELECT animal_id, name, __bartie_commit_ts, __bartie_updated_at FROM public.animals WHERE animal_id = 9999;"
 ```
 
 ## Demo
@@ -116,8 +116,8 @@ Setup and stack control:
 | `./deploy/fetch-terra.sh` | one-time: clone the terra source fixture |
 | `./scripts/reset.sh` | destroy volumes and bring the stack back up freshly seeded (clean slate) |
 | `./scripts/load.sh [N]` | generate N iterations of mixed insert/update/delete traffic (the workload the demos use) |
-| `docker exec -it minicdc-source psql -U postgres -d terra` | open a shell on the source database |
-| `docker exec -it minicdc-dest psql -U postgres -d warehouse` | open a shell on the destination database |
+| `docker exec -it bartie-source psql -U postgres -d terra` | open a shell on the source database |
+| `docker exec -it bartie-dest psql -U postgres -d warehouse` | open a shell on the destination database |
 
 The scripts are three complete demos; the binaries are the system they drive (run them by hand only for the manual walkthrough above); `cdcctl` inspects results; `reset.sh` gets you back to zero.
 

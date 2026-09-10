@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/BABTUNA/minicdc/internal/config"
-	"github.com/BABTUNA/minicdc/internal/writer"
+	"github.com/BABTUNA/bartie/internal/config"
+	"github.com/BABTUNA/bartie/internal/writer"
 )
 
 func main() {

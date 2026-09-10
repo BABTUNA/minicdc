@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/BABTUNA/minicdc/internal/bench"
-	"github.com/BABTUNA/minicdc/internal/config"
-	"github.com/BABTUNA/minicdc/internal/verify"
+	"github.com/BABTUNA/bartie/internal/bench"
+	"github.com/BABTUNA/bartie/internal/config"
+	"github.com/BABTUNA/bartie/internal/verify"
 )
 
 func main() {

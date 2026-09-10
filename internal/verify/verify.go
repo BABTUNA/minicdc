@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/BABTUNA/minicdc/internal/config"
+	"github.com/BABTUNA/bartie/internal/config"
 )
 
 // Run compares every replicated table on the source against the destination,

@@ -172,13 +172,13 @@ id | animal | observed | notes
 55 | 13     | 07:00    | "goodbye"
 ```
 
-**createStaging** — temp table, target columns plus bookkeeping (empty):
+**createStaging**: temp table, target columns plus bookkeeping (empty):
 
 ```text
-_minicdc_staging:  id | animal | observed | notes | __op | __unchanged
+_bartie_staging:  id | animal | observed | notes | __op | __unchanged
 ```
 
-**loadStaging** — dump the batch in, no matching yet. Row 77's notes is null because the event did not carry it (unchanged TOAST):
+**loadStaging**: dump the batch in, no matching yet. Row 77's notes is null because the event did not carry it (unchanged TOAST):
 
 ```text
 id  | animal | observed | notes       | __op | __unchanged
@@ -187,7 +187,7 @@ id  | animal | observed | notes       | __op | __unchanged
 55  | (null) | (null)   | (null)      | d    | {}
 ```
 
-**mergeStaging** — one MERGE reconciles staging into the target:
+**mergeStaging**: one MERGE reconciles staging into the target:
 
 ```text
 id 55  __op='d'  → DELETE

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Measure end-to-end latency under sustained write load, the way Artie's
 # benchmarks repo does: each destination row carries its source commit time
-# (__minicdc_commit_ts) and its apply time (__minicdc_updated_at); latency is
+# (__bartie_commit_ts) and its apply time (__bartie_updated_at); latency is
 # the difference. Writes data/latency_<date>.csv and prints a summary line.
 #
 # These are laptop numbers (colima VM, single broker, Postgres to Postgres),
@@ -28,8 +28,8 @@ echo "== truncate seed (isolate streaming latency)"
 (cd deploy && docker compose exec -T source psql -U postgres -d terra -q \
   -c "TRUNCATE observations, animals, watering_holes;")
 
-start_reader() { ./bin/reader > /tmp/minicdc-reader.log 2>&1 & READER_PID=$!; }
-start_writer() { ./bin/writer > /tmp/minicdc-writer.log 2>&1 & WRITER_PID=$!; }
+start_reader() { ./bin/reader > /tmp/bartie-reader.log 2>&1 & READER_PID=$!; }
+start_writer() { ./bin/writer > /tmp/bartie-writer.log 2>&1 & WRITER_PID=$!; }
 cleanup() { kill "$READER_PID" "$WRITER_PID" 2>/dev/null || true; }
 trap cleanup EXIT
 
@@ -38,7 +38,7 @@ start_writer
 start_reader
 
 echo "== sustained load: $ITERATIONS iterations"
-./scripts/load.sh "$ITERATIONS" > /tmp/minicdc-load.log 2>&1
+./scripts/load.sh "$ITERATIONS" > /tmp/bartie-load.log 2>&1
 
 echo "== let the tail drain, then verify"
 ./bin/cdcctl verify --timeout 120s

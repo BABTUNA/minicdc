@@ -18,8 +18,8 @@ PSQL="docker compose exec -T source psql -U postgres -d terra -q"
 seeded=$(cd deploy && $PSQL -tAc "SELECT count(*) FROM observations;")
 echo "== source seeded with $seeded observations"
 
-start_reader() { ./bin/reader > /tmp/minicdc-reader.log 2>&1 & READER_PID=$!; }
-start_writer() { ./bin/writer > /tmp/minicdc-writer.log 2>&1 & WRITER_PID=$!; }
+start_reader() { ./bin/reader > /tmp/bartie-reader.log 2>&1 & READER_PID=$!; }
+start_writer() { ./bin/writer > /tmp/bartie-writer.log 2>&1 & WRITER_PID=$!; }
 cleanup() { kill "$READER_PID" "$WRITER_PID" 2>/dev/null || true; }
 trap cleanup EXIT
 
@@ -30,7 +30,7 @@ start_reader
 # Write live changes WHILE the backfill is in flight: these must interleave
 # correctly with the snapshot rows.
 echo "== concurrent live load during backfill"
-./scripts/load.sh "${1:-80}" > /tmp/minicdc-load.log 2>&1 &
+./scripts/load.sh "${1:-80}" > /tmp/bartie-load.log 2>&1 &
 LOAD_PID=$!
 
 wait "$LOAD_PID"

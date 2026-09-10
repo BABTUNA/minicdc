@@ -5,9 +5,9 @@
 services:
   source:
     image: postgres:16
-    container_name: minicdc-source
+    container_name: bartie-source
     environment:
-      POSTGRES_PASSWORD: minicdc
+      POSTGRES_PASSWORD: bartie
       POSTGRES_DB: terra
     command:
       - "postgres"
@@ -25,7 +25,7 @@ services:
 
   redpanda:
     image: redpandadata/redpanda:v24.2.4
-    container_name: minicdc-redpanda
+    container_name: bartie-redpanda
     command:
       - redpanda
       - start
@@ -41,9 +41,9 @@ services:
 
   dest:
     image: postgres:16
-    container_name: minicdc-dest
+    container_name: bartie-dest
     environment:
-      POSTGRES_PASSWORD: minicdc
+      POSTGRES_PASSWORD: bartie
       POSTGRES_DB: warehouse
     ports:
       - "5411:5432"

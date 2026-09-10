@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/segmentio/kafka-go"
 
-	"github.com/BABTUNA/minicdc/internal/config"
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/config"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 const (
@@ -37,7 +37,7 @@ func New(ctx context.Context, cfg config.Config) (*Writer, error) {
 
 	consumer := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{cfg.KafkaBroker},
-		GroupID:     "minicdc-writer",
+		GroupID:     "bartie-writer",
 		Topic:       cfg.Topic,
 		StartOffset: kafka.FirstOffset,
 		// A kill -9'd writer never leaves the group; the broker only evicts it

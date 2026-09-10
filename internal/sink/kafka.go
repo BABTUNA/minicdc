@@ -7,7 +7,7 @@ import (
 
 	"github.com/segmentio/kafka-go"
 
-	"github.com/BABTUNA/minicdc/internal/events"
+	"github.com/BABTUNA/bartie/internal/events"
 )
 
 // KafkaPublisher writes change events to one topic, keyed by table+PK so a

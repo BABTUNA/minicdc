@@ -5,8 +5,8 @@ import (
 
 	"github.com/jackc/pglogrepl"
 
-	"github.com/BABTUNA/minicdc/internal/events"
-	"github.com/BABTUNA/minicdc/internal/pgval"
+	"github.com/BABTUNA/bartie/internal/events"
+	"github.com/BABTUNA/bartie/internal/pgval"
 )
 
 // buildChangeEvent turns a pgoutput tuple into our envelope, for inserts
