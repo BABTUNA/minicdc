@@ -153,6 +153,59 @@ ON CONFLICT (animal_id) DO UPDATE SET
 
 Idempotency: replaying the same batch re-runs "delete these PKs, set those PKs to state X." Same end state every time. That retires phase 1's `ON CONFLICT DO NOTHING` crutch, which would have skipped newer states.
 
+### Worked example: one batch through create / load / merge
+
+A deduped batch of three events for `observations`:
+
+```text
+op  pk          after                                   unchanged
+c   {id:101}    {id:101, animal:42, notes:"long text"}  []
+u   {id:77}     {id:77, animal:42, observed:09:59}      ["notes"]
+d   {id:55}     null                                    []
+```
+
+Target table before:
+
+```text
+id | animal | observed | notes
+77 | 42     | 08:00    | "old huge value"
+55 | 13     | 07:00    | "goodbye"
+```
+
+**createStaging** — temp table, target columns plus bookkeeping (empty):
+
+```text
+_minicdc_staging:  id | animal | observed | notes | __op | __unchanged
+```
+
+**loadStaging** — dump the batch in, no matching yet. Row 77's notes is null because the event did not carry it (unchanged TOAST):
+
+```text
+id  | animal | observed | notes       | __op | __unchanged
+101 | 42     | (null)   | "long text" | c    | {}
+77  | 42     | 09:59    | (null)      | u    | {notes}
+55  | (null) | (null)   | (null)      | d    | {}
+```
+
+**mergeStaging** — one MERGE reconciles staging into the target:
+
+```text
+id 55  __op='d'  → DELETE
+id 77  matches   → UPDATE observed=09:59, but KEEP notes ('notes' in __unchanged)
+id 101 no match  → INSERT
+```
+
+Target table after:
+
+```text
+id  | animal | observed | notes
+77  | 42     | 09:59    | "old huge value"   (updated; notes preserved)
+101 | 42     | (null)   | "long text"        (inserted)
+                                             (55 deleted)
+```
+
+Row 77 kept its big `notes` value even though the update event carried null for it, because `__unchanged` told the MERGE to leave that column alone. Then `tx.Commit`, the temp table drops, and the Kafka offset is committed.
+
 ### 5. Offset commit timeline (the crash-safety contract)
 
 ```text
