@@ -17,7 +17,7 @@ CSV="data/latency_$(date +%Y%m%d_%H%M%S).csv"
 
 bold "1/3  Send a burst of live changes"
 why "each row carries its source commit time; the writer stamps its apply time"
-start=$SECONDS
+load_start=$(date +%s)
 run ./scripts/load.sh "$ITER"
 
 bold "2/3  Let the stream drain"
@@ -26,9 +26,9 @@ sleep 4
 
 bold "3/3  Report end-to-end latency (streaming rows only)"
 why "latency = destination apply time - source commit time, per row, bucketed by minute"
-# Measure only rows applied since the burst began, which excludes the backfill
-# rows (all stamped at setup time) and leaves a clean streaming number.
-window=$(( SECONDS - start + 5 ))
+# Window = exactly the time since the burst began, so anything applied before
+# it (the setup backfill) is excluded and only streamed rows are measured.
+window=$(( $(date +%s) - load_start ))
 run ./bin/cdcctl latency --table public.observations --since "${window}s" --csv "$CSV"
 
 printf '\n\033[2mper-minute detail written to %s\033[0m\n' "$CSV"

@@ -15,9 +15,11 @@ VALUES (500, 'Load Pan', 'Load Region', -1.0, 30.0)
 ON CONFLICT DO NOTHING;
 SQL
 
-# Unique id base per run (seconds since epoch, mod 1e6) so repeated demo runs
-# do not collide on primary keys. Stays well under int4 range.
-BASE=$(( 100000 + ($(date +%s) % 1000000) ))
+# Unique id BLOCK per run so back-to-back demo runs never collide. Each run
+# gets its own 10,000-id block (indexed by the second it started), so even a
+# few-hundred-row run stays inside its block and consecutive runs never
+# overlap. Max id ~2.0e9, under the int4 limit. Blocks recycle every ~2.3 days.
+BASE=$(( 100000 + ($(date +%s) % 200000) * 10000 ))
 
 for i in $(seq 1 "$ITERATIONS"); do
   id=$((BASE + i))
